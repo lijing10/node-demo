@@ -1,21 +1,33 @@
 var express = require('express'),
-	mongodb = require('mongodb');
+	mongodb = require('mongodb'),
+	bodyParser = require('body-parser'),
+	session = require('express-session'),
+	cookieParser = require('cookie-parser');
 
-app = express.createServer();
+var app = express();
+
+app.set('view engine', 'jade');
+app.set('view options', { layout: false });
 
 /**
  * 中间件
  */
-app.use(express.bodyParser());
-app.use(express.cookieParser());
-app.use(express.session({ secret: 'my secret' }));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(session({
+	resave: true,
+	saveUninitialized: true,
+	secret: 'my secret'
+}));
 
 /**
  * 身份验证中间件
  */
 app.use(function(req, res, next) {
-	console.log("_id_: ", req.session.loggedIn);
+	
 	if (req.session.loggedIn) {
+		console.log("_id_: ", req.session.loggedIn);
 		// res.local('authenticated', true);
 		res.locals.authenticated = true;
 
@@ -28,19 +40,18 @@ app.use(function(req, res, next) {
 
 			var collection = db.collection('documents');
 			
-			collection.find({ 
-				// _id: { $oid: req.session.loggedIn }
-				_id: req.session.loggedIn
+			collection.find({
+				_id: mongodb.ObjectId(req.session.loggedIn)
 			}).toArray(function(err, result) {
 				if (err) throw err;
-				console.log("find again result: ", result);
+				console.log("find check result: ", result);
 				
 				// res.local('me', result[0]);
-				res.locals.me = result;
+				res.locals.me = result[0];
 				next();
 			});
 
-			console.log('\033[96m + \033[39m 身份验证成功成功');
+			console.log('\033[96m + \033[39m 身份验证成功');
 		});
 	} else {
 		// res.local('authenticated', false);
@@ -48,9 +59,6 @@ app.use(function(req, res, next) {
 		next();
 	}
 });
-
-app.set('view engine', 'jade');
-app.set('view options', { layout: false });
 
 app.get('/', function(req, res) {
 	res.render('index');
@@ -82,7 +90,7 @@ app.post('/login', function(req, res) {
 		if (err) return next(err);
 
 		var collection = db.collection('documents');
-		console.log(req.body.user);
+		console.log(req.body);
 		
 		collection.find({ 
 			email: req.body.user.email,
@@ -97,7 +105,7 @@ app.post('/login', function(req, res) {
 			res.redirect('/');
 		});
 
-		console.log('\033[96m + \033[39m 登陆连接成功');
+		console.log('\033[96m + \033[39m 登陆成功');
 	});
 });
 
@@ -123,7 +131,7 @@ app.post('/signup', function(req, res, next) {
 			res.redirect('/login/' + result.ops[0].email);
 		});
 
-		console.log('\033[96m + \033[39m 连接成功');
+		console.log('\033[96m + \033[39m 注册成功');
 	});
 });
 
@@ -141,7 +149,13 @@ app.post('/signup', function(req, res, next) {
 
 // });
 
-app.listen(3001, function() {
+// app.listen(3001, function() {
+// 	console.log('\033[96m + \033[39m app listening on *:3001');
+// });
+
+app.set('port', process.env.PORT || 3001);
+
+var server = app.listen(app.get('port'), function() {
 	console.log('\033[96m + \033[39m app listening on *:3001');
 });
 
