@@ -1,0 +1,17 @@
+extends layout
+block body
+  if (signupEmail)
+    p 注册成功，请您重新登陆!
+  form(action="/login", method="POST")
+    fieldset
+      legend Login in
+      p
+        label Email
+        input(name="user[email]", type="text" value=signupEmail)
+      p
+        label Password
+        input(name="user[password]", type="password")
+      p
+        button Submit
+      p
+        a(href="/") Go back
